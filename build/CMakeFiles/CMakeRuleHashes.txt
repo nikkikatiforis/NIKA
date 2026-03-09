@@ -1,0 +1,4 @@
+# Hashes of file build rules.
+90b903d267c155d1b408b9760300dab9 NIKA_artefacts/JuceLibraryCode/JuceHeader.h
+ec82ebc20e911cc58036841b2dcf63d5 NIKA_artefacts/JuceLibraryCode/NIKA_Standalone/PkgInfo
+f2481966fcb5691ab08b56bac7a56471 NIKA_artefacts/JuceLibraryCode/NIKA_VST3/PkgInfo
