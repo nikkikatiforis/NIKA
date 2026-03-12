@@ -56,10 +56,10 @@ namespace
                                    "\xd0\xa7\xd0\xa2\xd0\x9e\xd0\x91 ";
     static const char kFtrSk[]   = "\xd0\xa1\xd0\x9a\xd0\x90\xd0\x97\xd0\x9a\xd0\xa3";
     static const char kFtrPost[] = " \xd0\xa1\xd0\x94\xd0\x95\xd0\x9b\xd0\x90\xd0\xa2\xd0\xac "
-                                   "\xd0\x91\xd0\xab\xd0\x9b\xd0\xac\xd0\xae";
+                                   "\xd0\x91\xd0\xab\xd0\x9b\xd0\xac\xd0\xae.";
     constexpr int kFtrPreGlyphs  = 17;
     constexpr int kFtrSkGlyphs   = 6;
-    constexpr int kFtrPostGlyphs = 14;
+    constexpr int kFtrPostGlyphs = 15;
 
     // ---- Unicode filled-triangle arrows (UTF-8) ----------------------------
     // ◄ U+25C4   ► U+25BA
@@ -153,32 +153,34 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
 {
     auto& av = proc.apvts;
 
-    // ---- Linear OSC attachments: step/32 → [minV, maxV] --------------------
-    auto oscPA = [&] (const char* id, int* sp,
-                      float minV, float maxV) -> std::unique_ptr<PA>
+    // ---- OSC level attachments: param stores step directly (0-32) -----------
+    auto stepPA = [&] (const char* id, int* sp) -> std::unique_ptr<PA>
     {
         auto pa = std::make_unique<PA> (
             *av.getParameter (id),
-            [this, sp, minV, maxV] (float v) {
-                *sp = juce::jlimit (0, 32,
-                    juce::roundToInt (juce::jmap (v, minV, maxV, 0.0f, 32.0f)));
+            [this, sp] (float v) {
+                if (suppressCallbacks_) return;
+                *sp = juce::jlimit (0, 32, juce::roundToInt (v));
                 repaint();
             });
         pa->sendInitialUpdate();
         return pa;
     };
 
-    paSaw   = oscPA ("sawLevel",   &sSaw,   0.0f,  1.0f);
-    paSqr   = oscPA ("squareLevel",&sSqr,   0.0f,  1.0f);
-    paPls   = oscPA ("pulseLevel", &sPls,   0.0f,  1.0f);
-    paPw    = oscPA ("pulseWidth", &sPw,    0.05f, 0.95f);
-    paSub   = oscPA ("subLevel",   &sSub,   0.0f,  1.0f);
-    paNoise = oscPA ("noiseLevel", &sNoise, 0.0f,  1.0f);
+    paSaw   = stepPA ("sawLevel",   &sSaw);
+    paSqr   = stepPA ("squareLevel",&sSqr);
+    paPls   = stepPA ("pulseLevel", &sPls);
+    paSub   = stepPA ("subLevel",   &sSub);
+    paNoise = stepPA ("noiseLevel", &sNoise);
+
+    // ---- Pulse width: step 0-32 ---------------------------------------------
+    paPw = stepPA ("pulseWidth", &sPw);
 
     // ---- Cutoff: log-octave mapping -----------------------------------------
     paCutoff = std::make_unique<PA> (
         *av.getParameter ("cutoff"),
         [this] (float hz) {
+            if (suppressCallbacks_) return;
             const float n = std::log (juce::jmax (16.0f, hz) / 16.0f)
                             / std::log (1024.0f);
             sCutoff = juce::jlimit (0, 32, juce::roundToInt (n * 32.0f));
@@ -186,38 +188,26 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
         });
     paCutoff->sendInitialUpdate();
 
-    // ---- Resonance: linear 0-1 ----------------------------------------------
+    // ---- Resonance: step 0-32 -----------------------------------------------
     paReso = std::make_unique<PA> (
         *av.getParameter ("resonance"),
         [this] (float v) {
-            sReso = juce::jlimit (0, 32, juce::roundToInt (v * 32.0f));
+            if (suppressCallbacks_) return;
+            sReso = juce::jlimit (0, 32, juce::roundToInt (v));
             repaint();
         });
     paReso->sendInitialUpdate();
 
-    // ---- ADSR: exponential time mapping -------------------------------------
-    auto adsrPA = [&] (const char* id, int* sp,
-                       float mn, float mx) -> std::unique_ptr<PA>
-    {
-        auto pa = std::make_unique<PA> (
-            *av.getParameter (id),
-            [this, sp, mn, mx] (float v) {
-                const float n = std::log (v / mn) / std::log (mx / mn);
-                *sp = juce::jlimit (0, 32, juce::roundToInt (n * 32.0f));
-                repaint();
-            });
-        pa->sendInitialUpdate();
-        return pa;
-    };
-
-    paAtk = adsrPA ("attack",  &sAtk, 0.0005f, 4.0f);
-    paDec = adsrPA ("decay",   &sDec, 0.004f,  4.0f);
-    paRel = adsrPA ("release", &sRel, 0.002f,  8.0f);
+    // ---- ADSR: step 0-32 (processor converts to seconds) -------------------
+    paAtk = stepPA ("attack",  &sAtk);
+    paDec = stepPA ("decay",   &sDec);
+    paRel = stepPA ("release", &sRel);
 
     paSus = std::make_unique<PA> (
         *av.getParameter ("sustain"),
         [this] (float v) {
-            sSus = juce::jlimit (0, 32, juce::roundToInt (v * 32.0f));
+            if (suppressCallbacks_) return;
+            sSus = juce::jlimit (0, 32, juce::roundToInt (v));
             repaint();
         });
     paSus->sendInitialUpdate();
@@ -225,7 +215,8 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paEnvAmt = std::make_unique<PA> (
         *av.getParameter ("filterEnvAmt"),
         [this] (float v) {
-            sEnvAmt = juce::jlimit (0, 32, juce::roundToInt (v * 32.0f));
+            if (suppressCallbacks_) return;
+            sEnvAmt = juce::jlimit (0, 32, juce::roundToInt (v));
             repaint();
         });
     paEnvAmt->sendInitialUpdate();
@@ -234,6 +225,7 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paDrive = std::make_unique<PA> (
         *av.getParameter ("satDrive"),
         [this] (float v) {
+            if (suppressCallbacks_) return;
             driveOn_ = (v > 0.5f);
             syncTimer();
             repaint();
@@ -244,6 +236,7 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paMono = std::make_unique<PA> (
         *av.getParameter ("mono"),
         [this] (float v) {
+            if (suppressCallbacks_) return;
             monoOn_ = (v > 0.5f);
             repaint();
         });
@@ -253,6 +246,7 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paPatch = std::make_unique<PA> (
         *av.getParameter ("fxPatch"),
         [this] (float v) {
+            if (suppressCallbacks_) return;
             sPatch = juce::jlimit (1, 7, juce::roundToInt (v));
             repaint();
         });
@@ -262,7 +256,8 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paMix = std::make_unique<PA> (
         *av.getParameter ("fxMix"),
         [this] (float v) {
-            sMix = juce::jlimit (0, 32, juce::roundToInt (v * 32.0f));
+            if (suppressCallbacks_) return;
+            sMix = juce::jlimit (0, 32, juce::roundToInt (v));
             repaint();
         });
     paMix->sendInitialUpdate();
@@ -270,24 +265,26 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
     paDepth = std::make_unique<PA> (
         *av.getParameter ("ksDepth"),
         [this] (float v) {
-            sDepth = juce::jlimit (0, 32, juce::roundToInt (v * 32.0f));
+            if (suppressCallbacks_) return;
+            sDepth = juce::jlimit (0, 32, juce::roundToInt (v));
             repaint();
         });
     paDepth->sendInitialUpdate();
 
     // ---- Factory presets — slots 0–6, displayed as 01–07 -------------------
     // Fields: saw sqr pls pw sub noise cutoff reso atk dec sus rel envAmt patch mix depth drive mono
-    presets_[0] = { 18,  0,  0,  2,  3,  0, 19,  5,  7, 13,  5, 21, 13,  1, 21,  8, false, false };
-    presets_[1] = { 32, 32, 20, 32, 32,  4, 16, 16, 32, 32, 32, 32, 32,  5, 24,  8, false, false };
-    presets_[2] = { 20,  0,  0,  2, 24,  0,  8,  6,  3, 16, 18, 10, 11,  5, 10,  6, false, false };
-    presets_[3] = { 26,  5,  0,  2,  0,  3, 21,  2, 24, 18, 26, 26,  5,  2, 24,  3, false, false };
-    presets_[4] = {  0, 21,  0, 24,  0,  0, 16,  3,  5, 21, 13, 24,  3,  7, 26,  4, false, false };
-    presets_[5] = {  5,  0, 18, 21,  5,  3, 18, 13,  5, 16, 16, 18,  8,  3, 26, 10, false, false };
-    presets_[6] = { 16,  0,  0,  2, 13,  2, 20, 10, 28, 26, 21, 32, 24,  7, 28, 13, false, false };
+    // P1 Oklou | P2 MkGee | P3 Brazil Funk | P4 4 Strings | P5 50s | P6 Rhodes | P7 Temple of Time
+    presets_[0] = {  0,  0, 24, 26,  0,  2, 16,  3,  7, 18, 16, 24, 28,  1,  8, 20, false, false };
+    presets_[1] = { 32, 32, 12, 32, 32,  1, 16,  4, 28, 32, 28, 22, 15,  2, 24,  6, false, false };
+    presets_[2] = {  8, 32, 12, 23, 32,  7, 16,  6,  4, 32, 19, 10, 12,  3,  1,  6, false,  true };
+    presets_[3] = { 19,  2,  0,  0,  0,  1, 30,  2, 24, 18, 26, 26,  5,  4, 32,  3, false, false };
+    presets_[4] = { 11, 21, 32, 18,  7, 17, 31,  8,  7, 20, 10, 16, 17,  5, 18,  4, false, false };
+    presets_[5] = {  3, 32, 24, 21,  2,  1, 16, 32, 23, 16, 16, 18, 13,  6,  2, 10, false,  true };
+    presets_[6] = { 12, 24,  8, 20, 16,  0, 15,  5, 18, 24, 30, 30,  8,  7, 28, 12, false, false };
 
     currentPreset_ = proc.currentPresetIndex;
+    loadPreset (currentPreset_);
 
-    loadPreset (0);
     setSize (kW, kH);
     syncTimer();
 }
@@ -884,6 +881,7 @@ void NIKAAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
 
     // ---- Preset arrows: cycle slots 0–6, displayed as 01–07 ----------------
     if (activeSlot_ == kPresetPrev) {
+        if (!initMode_) savePreset (currentPreset_);
         currentPreset_ = (currentPreset_ + kNumPresets - 1) % kNumPresets;
         initMode_ = false;
         loadPreset (currentPreset_);
@@ -892,6 +890,7 @@ void NIKAAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
         return;
     }
     if (activeSlot_ == kPresetNext) {
+        if (!initMode_) savePreset (currentPreset_);
         currentPreset_ = (currentPreset_ + 1) % kNumPresets;
         initMode_ = false;
         loadPreset (currentPreset_);
@@ -956,6 +955,7 @@ void NIKAAudioProcessorEditor::mouseWheelMove (const juce::MouseEvent& e,
             sPatch = juce::jlimit (1, 7, sPatch + dir);
             pushParam (kPatchPrev);
         } else if (i == kPresetPrev || i == kPresetNext) {
+            if (!initMode_) savePreset (currentPreset_);
             currentPreset_ = juce::jlimit (0, kNumPresets - 1, currentPreset_ + dir);
             initMode_ = false;
             loadPreset (currentPreset_);
@@ -1014,63 +1014,34 @@ void NIKAAudioProcessorEditor::setStep (int slot, int newStep)
 //==============================================================================
 void NIKAAudioProcessorEditor::pushParam (int slot)
 {
-    auto lin = [] (int s) { return s / 32.0f; };
-    auto exp = [] (int s, float mn, float mx) {
-        return mn * std::pow (mx / mn, s / 32.0f);
-    };
-    // e^2 curve: y = (e^(2x) - 1) / (e^2 - 1), x = s/32
-    // Gives more resolution in the lower range; full amplitude not reached until step 32.
-    // At step 20/32: 0.390 (vs 0.625 linear)
-    static constexpr float kE2 = 6.38905609893f;  // e^2 - 1
-    auto oscExp = [&] (int s) {
-        const float x = s / 32.0f;
-        return (std::exp (2.0f * x) - 1.0f) / kE2;
-    };
-
     switch (slot) {
-        case kSaw:
-            paSaw->setValueAsCompleteGesture (oscExp (sSaw)); break;
-        case kSqr:
-            paSqr->setValueAsCompleteGesture (oscExp (sSqr)); break;
-        case kPls:
-            paPls->setValueAsCompleteGesture (oscExp (sPls)); break;
-        case kPw:
-            paPw->setValueAsCompleteGesture (
-                juce::jmap ((float)sPw, 0.0f, 32.0f, 0.05f, 0.95f)); break;
-        case kSub:
-            paSub->setValueAsCompleteGesture (oscExp (sSub)); break;
-        case kNoise:
-            paNoise->setValueAsCompleteGesture (oscExp (sNoise)); break;
+        case kSaw:    paSaw->setValueAsCompleteGesture    ((float)sSaw);    break;
+        case kSqr:    paSqr->setValueAsCompleteGesture    ((float)sSqr);    break;
+        case kPls:    paPls->setValueAsCompleteGesture    ((float)sPls);    break;
+        case kPw:     paPw->setValueAsCompleteGesture     ((float)sPw);     break;
+        case kSub:    paSub->setValueAsCompleteGesture    ((float)sSub);    break;
+        case kNoise:  paNoise->setValueAsCompleteGesture  ((float)sNoise);  break;
 
         case kCutoff:
             paCutoff->setValueAsCompleteGesture (
                 16.0f * std::pow (1024.0f, sCutoff / 32.0f)); break;
-        case kReso:
-            paReso->setValueAsCompleteGesture (lin (sReso)); break;
+        case kReso:   paReso->setValueAsCompleteGesture   ((float)sReso);   break;
 
-        case kAtk:
-            paAtk->setValueAsCompleteGesture (exp (sAtk, 0.0005f, 4.0f)); break;
-        case kDec:
-            paDec->setValueAsCompleteGesture (exp (sDec, 0.004f,  4.0f)); break;
-        case kSus:
-            paSus->setValueAsCompleteGesture (lin (sSus)); break;
-        case kRel:
-            paRel->setValueAsCompleteGesture (exp (sRel, 0.002f,  8.0f)); break;
-        case kEnvAmt:
-            paEnvAmt->setValueAsCompleteGesture (lin (sEnvAmt)); break;
+        case kAtk:    paAtk->setValueAsCompleteGesture    ((float)sAtk);    break;
+        case kDec:    paDec->setValueAsCompleteGesture    ((float)sDec);    break;
+        case kSus:    paSus->setValueAsCompleteGesture    ((float)sSus);    break;
+        case kRel:    paRel->setValueAsCompleteGesture    ((float)sRel);    break;
+        case kEnvAmt: paEnvAmt->setValueAsCompleteGesture ((float)sEnvAmt); break;
 
         case kPatchPrev:
         case kPatchNext:
             paPatch->setValueAsCompleteGesture ((float)sPatch); break;
 
-        case kMix:
-            paMix->setValueAsCompleteGesture (lin (sMix)); break;
-        case kDepth:
-            paDepth->setValueAsCompleteGesture (lin (sDepth)); break;
+        case kMix:   paMix->setValueAsCompleteGesture   ((float)sMix);   break;
+        case kDepth: paDepth->setValueAsCompleteGesture ((float)sDepth); break;
 
         case kDrive:
             paDrive->setValueAsCompleteGesture (driveOn_ ? 1.0f : 0.0f); break;
-
         case kMono:
             paMono->setValueAsCompleteGesture (monoOn_ ? 1.0f : 0.0f); break;
 
@@ -1102,7 +1073,9 @@ void NIKAAudioProcessorEditor::loadPreset (int idx)
     sEnvAmt = p.envAmt; sPatch  = p.patch;  sMix    = p.mix;    sDepth  = p.depth;
     driveOn_ = p.drive; monoOn_ = p.mono;
     proc.currentPresetIndex = currentPreset_;
+    suppressCallbacks_ = true;
     pushAllParams();
+    suppressCallbacks_ = false;
     syncTimer();
 }
 

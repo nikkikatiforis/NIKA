@@ -177,6 +177,17 @@ private:
     double sampleRate  = 44100.0;
     int    activePatch = 0;    // 0 = uninitialised
 
+    // Pre-FX peaking EQ: -4 dB @ 256 Hz, Q=0.707 (RBJ cookbook)
+    // Applied to both channels before stage 1 (chorus).
+    struct Biquad
+    {
+        float b0=1,b1=0,b2=0,a1=0,a2=0;
+        float x1=0,x2=0,y1=0,y2=0;
+        void  setCoeffs (double sr, float freqHz, float dBgain, float Q) noexcept;
+        float tick (float x) noexcept;
+    };
+    Biquad eqL_, eqR_;
+
     // Reverb bank: 4 Moorer combs + 2 Schroeder allpass, per channel
     Comb    cmbL[kC], cmbR[kC];
     Allpass  apL[kA],  apR[kA];

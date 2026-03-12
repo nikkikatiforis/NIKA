@@ -135,12 +135,8 @@ private:
     std::atomic<float>* decayParam        = nullptr;
     std::atomic<float>* sustainParam      = nullptr;
     std::atomic<float>* releaseParam      = nullptr;
-    std::atomic<float>* envTargetParam    = nullptr;
     std::atomic<float>* filterEnvAmtParam = nullptr;
-    std::atomic<float>* compThresholdParam = nullptr;
-    std::atomic<float>* compRatioParam     = nullptr;
     std::atomic<float>* satDriveParam      = nullptr;
-    std::atomic<float>* gainParam          = nullptr;
     std::atomic<float>* ksDepthParam       = nullptr;
     std::atomic<float>* fxPatchParam       = nullptr;
     std::atomic<float>* fxMixParam         = nullptr;
@@ -158,6 +154,10 @@ private:
     // M/S width smoother — 128 ms TC; target sqrt(2) when drive on, 1.0 off
     float msWidthSmoothed_  = 1.0f;
     float msWidthSlewCoeff_ = 0.0f;
+
+    // Drive slew — 4 ms TC; smooths sat drive toggle to remove click
+    float satDriveSmoothed_  = 0.0f;
+    float satDriveSlewCoeff_ = 0.0f;
 
     // Mono note stack — tracks held notes oldest-first; top = most recent
     static constexpr int kNoteStackSize = 8;

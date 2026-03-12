@@ -29,15 +29,15 @@ const NIKAKeyswitchEngine::Patch NIKAKeyswitchEngine::kPatches[] =
 
     // D-1 (note 14) — fp: instant spike, dips below neutral, recovers
     { 1.0f, 3, {
-        { 1.0f,   0.032f, false, 0.0f },  // spike
+        { 1.0f,   0.256f, false, 0.0f },  // spike
         { -0.2f,  0.512f, false, 0.0f },  // drop below neutral
         { 0.0f,   2.048f, false, 0.0f }   // recover to neutral
     }, 0.0f, false, 0.0f },
 
     // D#-1 (note 15) — swell: filter opens (1 s) then closes back (1 s)
     { 1.0f, 2, {
-        { 1.0f, 1.000f, false, 0.0f },
-        { 0.0f, 1.000f, false, 0.0f }
+        { 1.0f, 1.024f, false, 0.0f },
+        { 0.0f, 2.048f, false, 0.0f }
     }, 0.0f, false, 0.0f },
 
     // E-1 (note 16) — sfz: instant spike, slow decay back to neutral

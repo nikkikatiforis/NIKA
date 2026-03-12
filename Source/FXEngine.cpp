@@ -238,10 +238,35 @@ float NIKAFXEngine::ShimmerVoice::tick (float x)
 //==============================================================================
 // NIKAFXEngine
 //==============================================================================
+void NIKAFXEngine::Biquad::setCoeffs (double sr, float freqHz, float dBgain, float Q) noexcept
+{
+    const double A  = std::pow (10.0, dBgain / 40.0);
+    const double w0 = 2.0 * juce::MathConstants<double>::pi * freqHz / sr;
+    const double cw = std::cos (w0);
+    const double sw = std::sin (w0);
+    const double al = sw / (2.0 * Q);
+    const double a0 = 1.0 + al / A;
+    b0 = float ((1.0 + al * A) / a0);
+    b1 = float ((-2.0 * cw)    / a0);
+    b2 = float ((1.0 - al * A) / a0);
+    a1 = float ((-2.0 * cw)    / a0);
+    a2 = float ((1.0 - al / A) / a0);
+}
+
+float NIKAFXEngine::Biquad::tick (float x) noexcept
+{
+    const float y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
+    x2=x1; x1=x; y2=y1; y1=y;
+    return y;
+}
+
 void NIKAFXEngine::prepare (double sr)
 {
     sampleRate  = sr;
     activePatch = 0;
+
+    eqL_.setCoeffs (sr, 256.0f, -4.0f, 0.707f);
+    eqR_.setCoeffs (sr, 256.0f, -4.0f, 0.707f);
 
     // Allocate all buffers to worst-case size at this sample rate.
     // setPatch() only reconfigures parameters and clears buffers — no alloc.
@@ -428,6 +453,10 @@ void NIKAFXEngine::process (float& L, float& R, float dryWet)
 
     const float dryL = L, dryR = R;
 
+    // --- Pre-FX EQ: -4 dB peaking bell @ 256 Hz, Q=0.707 --------------------
+    L = eqL_.tick (L);
+    R = eqR_.tick (R);
+
     // --- Stage 1: Chorus -----------------------------------------------------
     if (chWet > 0.0f)
     {
@@ -498,7 +527,7 @@ void NIKAFXEngine::process (float& L, float& R, float dryWet)
         const float shimR = fifthR * 0.3f + octaveR * 0.7f;
 
         // Add to wet bus with 512 ms fade envelope
-        const float gain = 0.16f * shFadeSmoothed_;
+        const float gain = 0.04f * shFadeSmoothed_;
         L += shimL * gain;
         R += shimR * gain;
     }

@@ -6,106 +6,89 @@ juce::AudioProcessorValueTreeState::ParameterLayout NIKAAudioProcessor::createPa
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // --- Oscillator mixer levels --------------------------------------------
+    // --- Oscillator mixer levels (steps 0-32) --------------------------------
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "sawLevel", "Saw Level",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.6875f));
+        "sawLevel", "Saw",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 32.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "squareLevel", "Square Level",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.0f));
+        "squareLevel", "Sqr",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "pulseLevel", "Pulse Level",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));  // non-zero: audible at init
+        "pulseLevel", "Pls",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "pulseWidth", "Pulse Width",
-        juce::NormalisableRange<float> (0.05f, 0.95f), 0.5f));
+        "pulseWidth", "PW",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 16.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "subLevel", "Sub Level",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.15625f));
+        "subLevel", "Sub",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "noiseLevel", "Noise Level",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.0f));
+        "noiseLevel", "Noise",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     // --- VCF ----------------------------------------------------------------
     // Log-skewed range: skew = 1/e ≈ 0.368; range 16–16384 Hz, default 1 kHz
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "cutoff", "Cutoff",
+        "cutoff", "Cut",
         juce::NormalisableRange<float> (16.0f, 16384.0f, 0.1f,
                                         1.0f / juce::MathConstants<float>::euler), 1000.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "resonance", "Resonance",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.09375f));
+        "resonance", "Res",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     // --- ADSR ---------------------------------------------------------------
-    // Time ranges are log-skewed (skew 0.5) so short times have fine resolution.
+    // Steps 0-32; processor converts to seconds using exp curve.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "attack", "Attack",
-        juce::NormalisableRange<float> (0.0005f, 4.0f, 0.001f, 0.5f), 0.01055f));
+        "attack", "Atk",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 2.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "decay", "Decay",
-        juce::NormalisableRange<float> (0.004f, 4.0f, 0.001f, 0.5f), 0.2995f));
+        "decay", "Dec",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 12.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "sustain", "Sustain",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.71875f));
+        "sustain", "Sus",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 32.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "release", "Release",
-        juce::NormalisableRange<float> (0.002f, 8.0f, 0.001f, 0.5f), 0.1569f));
-
-    // 0 = Amp, 1 = Filter, 2 = Both
-    layout.add (std::make_unique<juce::AudioParameterInt> (
-        "envTarget", "Env Target", 0, 2, 2));
+        "release", "Rel",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 16.0f));
 
     // How far the envelope opens the filter above the base cutoff.
     // Modulation is logarithmic: at full depth, env sweeps up to 5 octaves.
+    // Env target is hardcoded at 2 (Both) — no UI parameter.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "filterEnvAmt", "Filter Env Amount",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.28125f));
+        "filterEnvAmt", "FAMT",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     // --- Output stage -------------------------------------------------------
-    // Compressor
-    layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "compThreshold", "Comp Threshold",
-        juce::NormalisableRange<float> (-48.0f, 0.0f, 0.1f), -32.0f));
-
-    layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "compRatio", "Comp Ratio",
-        juce::NormalisableRange<float> (1.0f, 8.0f, 0.01f), 1.618f));
-
     // Saturator
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "satDrive", "Sat Drive",
+        "satDrive", "Fairy Tales",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.01f), 0.0f));
-
-    // --- Master gain --------------------------------------------------------
-    layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "gain", "Gain",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.8f));
 
     // --- Keyswitch ----------------------------------------------------------
     // Master depth scales how far the ks filter envelope opens the cutoff.
     // Velocity further scales within this ceiling.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "ksDepth", "Keyswitch Depth",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.25f));
+        "ksDepth", "Depth",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 32.0f));
 
     // --- Effects ------------------------------------------------------------
-    // 7 patch slots (2 implemented, 5 reserved).
+    // 7 patch slots.
     layout.add (std::make_unique<juce::AudioParameterInt> (
-        "fxPatch", "FX Patch", 1, 7, 1));
+        "fxPatch", "PATCH", 1, 7, 1));
 
-    // 0 = dry only, 1 = fully wet.
+    // 0 = dry only, 32 = fully wet.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "fxMix", "FX Mix",
-        juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+        "fxMix", "MIX",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
 
     // --- Mono mode ----------------------------------------------------------
     layout.add (std::make_unique<juce::AudioParameterBool> (
@@ -135,11 +118,7 @@ NIKAAudioProcessor::NIKAAudioProcessor()
     decayParam        = apvts.getRawParameterValue ("decay");
     sustainParam      = apvts.getRawParameterValue ("sustain");
     releaseParam      = apvts.getRawParameterValue ("release");
-    envTargetParam    = apvts.getRawParameterValue ("envTarget");
     filterEnvAmtParam  = apvts.getRawParameterValue ("filterEnvAmt");
-    gainParam          = apvts.getRawParameterValue ("gain");
-    compThresholdParam = apvts.getRawParameterValue ("compThreshold");
-    compRatioParam     = apvts.getRawParameterValue ("compRatio");
     satDriveParam      = apvts.getRawParameterValue ("satDrive");
     ksDepthParam       = apvts.getRawParameterValue ("ksDepth");
     fxPatchParam       = apvts.getRawParameterValue ("fxPatch");
@@ -188,6 +167,8 @@ void NIKAAudioProcessor::prepareToPlay (double sampleRate, int)
     modWheelSmoothed_  = 0.0f;
     msWidthSmoothed_   = 1.0f;
     msWidthSlewCoeff_  = 1.0f - std::exp (-1.0f / (0.128f * float (sampleRate)));
+    satDriveSmoothed_  = satDriveParam->load();
+    satDriveSlewCoeff_ = 1.0f - std::exp (-1.0f / (0.004f * float (sampleRate)));
 }
 
 //==============================================================================
@@ -452,34 +433,44 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 
     // --- Snapshot all block-level params ------------------------------------
-    const float ksDepth   = ksDepthParam->load();
-    const float fxMix     = fxMixParam->load();
-    const float sawLvl    = sawLevelParam->load();
-    const float sqLvl     = squareLevelParam->load();
-    const float pulLvl    = pulseLevelParam->load();
-    const float pw        = pulseWidthParam->load();
-    const float subLvl    = subLevelParam->load();
-    const float noiseLvl  = noiseLevelParam->load();
-    const float cutoffTarget    = cutoffParam->load();
-    const float resonanceTarget = resonanceParam->load();
-    const float slewCoeff       = 1.0f - std::exp (-1.0f / (0.016f * float (getSampleRate())));
-    const float gain      = gainParam->load();
-    const int   envTarget = (int)envTargetParam->load();   // 0=Amp, 1=Filter, 2=Both
-    const float fEnvAmt   = filterEnvAmtParam->load();     // [0..1] → up to 5 octaves
+    // Steps [0..32] → amplitudes via e² curve: amp = (exp(2x)−1)/(e²−1), x=step/32
+    static constexpr float kE2 = 6.38905609893f;
+    auto stepToAmp = [] (float step) {
+        const float x = step / 32.0f;
+        return (std::exp (2.0f * x) - 1.0f) / kE2;
+    };
 
-    const float attackSec  = attackParam->load();
-    const float decaySec   = decayParam->load();
-    const float sustainLvl = sustainParam->load();
-    const float releaseSec = releaseParam->load();
+    const float ksDepth   = ksDepthParam->load()   / 32.0f;
+    const float fxMix     = fxMixParam->load()     / 32.0f;
+    const float sawLvl    = stepToAmp (sawLevelParam->load());
+    const float sqLvl     = stepToAmp (squareLevelParam->load());
+    const float pulLvl    = stepToAmp (pulseLevelParam->load());
+    const float pw        = juce::jmap (pulseWidthParam->load(), 0.0f, 32.0f, 0.05f, 0.95f);
+    const float subLvl    = stepToAmp (subLevelParam->load());
+    const float noiseLvl  = stepToAmp (noiseLevelParam->load());
+    const float cutoffTarget    = cutoffParam->load();
+    const float resonanceTarget = resonanceParam->load() / 32.0f;
+    const float slewCoeff       = 1.0f - std::exp (-1.0f / (0.016f * float (getSampleRate())));
+    constexpr float gain  = 0.8f;
+    constexpr int envTarget = 2;   // hardcoded: Both (amp + filter)
+    const float fEnvAmt   = filterEnvAmtParam->load() / 32.0f;  // steps → [0..1] → up to 5 octaves
+
+    // ADSR: steps [0,32] → seconds via exp curve
+    const float attackSec  = 0.0005f * std::pow (4.0f    / 0.0005f, attackParam->load()  / 32.0f);
+    const float decaySec   = 0.004f  * std::pow (4.0f    / 0.004f,  decayParam->load()   / 32.0f);
+    const float sustainLvl = sustainParam->load() / 32.0f;
+    const float releaseSec = 0.002f  * std::pow (8.0f    / 0.002f,  releaseParam->load() / 32.0f);
     for (auto& v : voices)
         v.adsr.setParameters (attackSec, decaySec, sustainLvl, releaseSec);
 
-    // Drive (СКАЗКУ) shifts compressor threshold: −32 dB (off) → −8 dB (on).
-    const float satDrive   = satDriveParam->load();
-    const float compThresh = satDrive > 0.5f ? -8.0f : compThresholdParam->load();
-    compressor.setParameters (compThresh, compRatioParam->load());
-    saturator.setDrive (satDrive);
-    fxEngine.setDriveTarget   (satDrive > 0.5f ? 1.0f : 0.0f);
+    // Drive (СКАЗКУ): 16 ms slew on sat drive for click-free switching.
+    // Compressor threshold shifts: -24 dB (off) → -8 dB (on). Ratio fixed at φ.
+    const float satDriveTarget = satDriveParam->load();
+    satDriveSmoothed_ += satDriveSlewCoeff_ * (satDriveTarget - satDriveSmoothed_);
+    const float compThresh = -24.0f + satDriveSmoothed_ * 16.0f;  // -24 dB → -8 dB
+    compressor.setParameters (compThresh, 1.618f);
+    saturator.setDrive (satDriveSmoothed_);
+    fxEngine.setDriveTarget   (satDriveTarget > 0.5f ? 1.0f : 0.0f);
     fxEngine.setPatch         ((int)fxPatchParam->load());
 
     // BPM from host transport; fall back to 120 if unavailable.
@@ -602,9 +593,9 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // FX always runs — reverb/delay tails survive note-off
         fxEngine.process (lSamp, rSamp, fxMix);
 
-        // M/S width boost — drive on: +3 dB side channel (× sqrt2), 128 ms slew
+        // M/S width boost — drive on: +4.2 dB side channel (× φ), 128 ms slew
         {
-            const float widthTarget = (satDrive > 0.5f) ? 1.41421356f : 1.0f;
+            const float widthTarget = 1.0f + satDriveSmoothed_ * 0.618033988f;
             msWidthSmoothed_ += msWidthSlewCoeff_ * (widthTarget - msWidthSmoothed_);
             const float m = (lSamp + rSamp) * 0.5f;
             const float s = (lSamp - rSamp) * 0.5f * msWidthSmoothed_;
@@ -612,9 +603,8 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             rSamp = m - s;
         }
 
-        // Output gain: π drive (+9.9 dB), φ normal (+4.2 dB)
-        const float outMult = (satDrive > 0.5f) ? juce::MathConstants<float>::pi
-                                                 : 1.618033988f;
+        // Output gain: φ constant (+4.2 dB); drive-on adds √φ makeup (+2.1 dB)
+        const float outMult = 1.618033988f * (1.0f + satDriveSmoothed_ * 0.27201964951f);
         lSamp *= outMult;
         rSamp *= outMult;
 
@@ -648,30 +638,28 @@ void NIKAAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
             p->setValueNotifyingHost (p->convertTo0to1 (denorm));
     };
 
-    const auto lin  = [] (int s)                     { return s / 32.0f; };
-    const auto expV = [] (int s, float mn, float mx) { return mn * std::pow (mx / mn, s / 32.0f); };
-    const auto pw   = [] (int s)  { return juce::jmap ((float)s, 0.0f, 32.0f, 0.05f, 0.95f); };
-    const auto cut  = [] (int s)  { return 16.0f * std::pow (1024.0f, s / 32.0f); };
+    // All step params now store [0,32] directly; cutoff stores Hz.
+    const auto cut = [] (int s) { return 16.0f * std::pow (1024.0f, s / 32.0f); };
 
-    // Preset 01: SAW:18 SQR:00 PLS:00 PW:02 SUB:03 NSE:00
-    //            CUTOFF:19 RESO:05 ATK:07 DEC:13 SUS:05 REL:21 FAMT:13
-    //            FX:01 MIX:21 DEPTH:08  drive:false  mono:false
-    setP ("sawLevel",     lin  (18));
-    setP ("squareLevel",  lin  (0));
-    setP ("pulseLevel",   lin  (0));
-    setP ("pulseWidth",   pw   (2));
-    setP ("subLevel",     lin  (3));
-    setP ("noiseLevel",   lin  (0));
-    setP ("cutoff",       cut  (19));
-    setP ("resonance",    lin  (5));
-    setP ("attack",       expV (7,  0.0005f, 4.0f));
-    setP ("decay",        expV (13, 0.004f,  4.0f));
-    setP ("sustain",      lin  (5));
-    setP ("release",      expV (21, 0.002f,  8.0f));
-    setP ("filterEnvAmt", lin  (13));
+    // Preset 01 (Oklou): SAW:0 SQR:0 PLS:24 PW:26 SUB:0 NSE:2
+    //                    CUTOFF:16 RESO:3 ATK:7 DEC:18 SUS:16 REL:24 FAMT:28
+    //                    PATCH:1 MIX:8 DEPTH:20  drive:false  mono:false
+    setP ("sawLevel",     0.0f);
+    setP ("squareLevel",  0.0f);
+    setP ("pulseLevel",   24.0f);
+    setP ("pulseWidth",   26.0f);
+    setP ("subLevel",     0.0f);
+    setP ("noiseLevel",   2.0f);
+    setP ("cutoff",       cut (16));
+    setP ("resonance",    3.0f);
+    setP ("attack",       7.0f);
+    setP ("decay",        18.0f);
+    setP ("sustain",      16.0f);
+    setP ("release",      24.0f);
+    setP ("filterEnvAmt", 28.0f);
     setP ("fxPatch",      1.0f);
-    setP ("fxMix",        lin  (21));
-    setP ("ksDepth",      lin  (8));
+    setP ("fxMix",        8.0f);
+    setP ("ksDepth",      20.0f);
     setP ("satDrive",     0.0f);
     setP ("mono",         0.0f);
 }

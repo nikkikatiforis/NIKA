@@ -82,6 +82,7 @@ private:
     float dcBias     = 0.0f;   // DC asymmetry term          [0..0.12]
     float dcBiasSat  = 0.0f;   // tanh(dcBias × driveGain)   DC removal offset
     float noiseLevel = 0.0f;   // noise floor amplitude
+    float driveMix   = 0.0f;   // smooth crossfade weight [0..1] — set from satDriveSmoothed_
 
     // Frequency shaping — per channel, always active
     Biquad headBumpL, headBumpR;   // +2.618 dB @  80 Hz, Q = 0.618
