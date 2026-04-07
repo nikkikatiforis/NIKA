@@ -109,7 +109,11 @@ private:
     int  activeSlot_    { -1 };
     int  dragStartY_    {  0 };
     int  dragStartStep_ {  0 };
-    bool suppressCallbacks_ { false };   // true during loadPreset to block PA callback overwrites
+    bool suppressCallbacks_ { false };
+
+    // Standalone window drag (background area, no slot active)
+    juce::ComponentDragger windowDragger_;
+    bool draggingWindow_ { false };   // true during loadPreset to block PA callback overwrites
 
     //==========================================================================
     float cw_ { 7.5f };   // measured monospace character width (set in resized)

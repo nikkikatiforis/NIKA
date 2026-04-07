@@ -59,7 +59,7 @@ namespace
                                    "\xd0\x91\xd0\xab\xd0\x9b\xd0\xac\xd0\xae.";
     constexpr int kFtrPreGlyphs  = 17;
     constexpr int kFtrSkGlyphs   = 6;
-    constexpr int kFtrPostGlyphs = 15;
+    constexpr int kFtrPostGlyphs = 16;
 
     // ---- Unicode filled-triangle arrows (UTF-8) ----------------------------
     // ◄ U+25C4   ► U+25BA
@@ -273,17 +273,16 @@ NIKAAudioProcessorEditor::NIKAAudioProcessorEditor (NIKAAudioProcessor& p)
 
     // ---- Factory presets — slots 0–6, displayed as 01–07 -------------------
     // Fields: saw sqr pls pw sub noise cutoff reso atk dec sus rel envAmt patch mix depth drive mono
-    // P1 Oklou | P2 MkGee | P3 Brazil Funk | P4 4 Strings | P5 50s | P6 Rhodes | P7 Temple of Time
-    presets_[0] = {  0,  0, 24, 26,  0,  2, 16,  3,  7, 18, 16, 24, 28,  1,  8, 20, false, false };
-    presets_[1] = { 32, 32, 12, 32, 32,  1, 16,  4, 28, 32, 28, 22, 15,  2, 24,  6, false, false };
-    presets_[2] = {  8, 32, 12, 23, 32,  7, 16,  6,  4, 32, 19, 10, 12,  3,  1,  6, false,  true };
-    presets_[3] = { 19,  2,  0,  0,  0,  1, 30,  2, 24, 18, 26, 26,  5,  4, 32,  3, false, false };
-    presets_[4] = { 11, 21, 32, 18,  7, 17, 31,  8,  7, 20, 10, 16, 17,  5, 18,  4, false, false };
+    // P1 Oklou | P2 MkGee | P3 Speed | P4 4 Strings | P5 50s | P6 Rhodes | P7 Temple of Time
+    presets_[0] = { 32,  2,  4, 16,  0,  2, 16,  3,  7, 26, 10, 24, 19,  1,  8, 20, false, false };
+    presets_[1] = { 32, 32, 12, 32, 32,  1, 16,  4, 28, 32, 28, 22, 15,  2, 24, 12, false, false };
+    presets_[2] = {  8, 32, 12, 23, 32,  7, 16,  6,  4, 32, 19, 10, 12,  3,  1, 12, false,  true };
+    presets_[3] = { 19,  2,  0,  0,  0,  1, 30,  2, 24, 18, 26, 26,  5,  4, 32,  7, false, false };
+    presets_[4] = { 11, 21, 32, 18,  7, 17, 31,  8,  7, 20, 10, 16, 17,  5, 18,  8, false, false };
     presets_[5] = {  3, 32, 24, 21,  2,  1, 16, 32, 23, 16, 16, 18, 13,  6,  2, 10, false,  true };
     presets_[6] = { 12, 24,  8, 20, 16,  0, 15,  5, 18, 24, 30, 30,  8,  7, 28, 12, false, false };
 
     currentPreset_ = proc.currentPresetIndex;
-    loadPreset (currentPreset_);
 
     setSize (kW, kH);
     syncTimer();
@@ -881,7 +880,6 @@ void NIKAAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
 
     // ---- Preset arrows: cycle slots 0–6, displayed as 01–07 ----------------
     if (activeSlot_ == kPresetPrev) {
-        if (!initMode_) savePreset (currentPreset_);
         currentPreset_ = (currentPreset_ + kNumPresets - 1) % kNumPresets;
         initMode_ = false;
         loadPreset (currentPreset_);
@@ -890,7 +888,6 @@ void NIKAAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
         return;
     }
     if (activeSlot_ == kPresetNext) {
-        if (!initMode_) savePreset (currentPreset_);
         currentPreset_ = (currentPreset_ + 1) % kNumPresets;
         initMode_ = false;
         loadPreset (currentPreset_);
@@ -921,11 +918,28 @@ void NIKAAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
             dragStartStep_ = *sp;
     }
 
+    // ---- Background drag (standalone only — no slot active) -----------------
+    if (activeSlot_ == -1 && juce::JUCEApplication::isStandaloneApp())
+    {
+        if (auto* topLevel = getTopLevelComponent())
+        {
+            windowDragger_.startDraggingComponent (topLevel, e.getEventRelativeTo (topLevel));
+            draggingWindow_ = true;
+        }
+    }
+
     repaint();
 }
 
 void NIKAAudioProcessorEditor::mouseDrag (const juce::MouseEvent& e)
 {
+    if (draggingWindow_)
+    {
+        if (auto* topLevel = getTopLevelComponent())
+            windowDragger_.dragComponent (topLevel, e.getEventRelativeTo (topLevel), nullptr);
+        return;
+    }
+
     if (activeSlot_ >= 0 && stepPtr (activeSlot_) != nullptr) {
         const int delta = (dragStartY_ - e.y) / 4;
         setStep (activeSlot_, dragStartStep_ + delta);
@@ -935,6 +949,8 @@ void NIKAAudioProcessorEditor::mouseDrag (const juce::MouseEvent& e)
 
 void NIKAAudioProcessorEditor::mouseUp (const juce::MouseEvent&)
 {
+    draggingWindow_ = false;
+
     if (activeSlot_ >= kKsDot0 && activeSlot_ <= kKsDot6)
         proc.releaseKeyswitch (activeSlot_ - kKsDot0);
 
@@ -955,7 +971,6 @@ void NIKAAudioProcessorEditor::mouseWheelMove (const juce::MouseEvent& e,
             sPatch = juce::jlimit (1, 7, sPatch + dir);
             pushParam (kPatchPrev);
         } else if (i == kPresetPrev || i == kPresetNext) {
-            if (!initMode_) savePreset (currentPreset_);
             currentPreset_ = juce::jlimit (0, kNumPresets - 1, currentPreset_ + dir);
             initMode_ = false;
             loadPreset (currentPreset_);

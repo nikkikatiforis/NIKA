@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(NIKA VERSION 1.0.0)
 
-set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../JUCE")
+set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../vendor/JUCE")
 add_subdirectory(${JUCE_PATH} JUCE)
 
 juce_add_plugin(NIKA
@@ -14,7 +14,7 @@ juce_add_plugin(NIKA
     COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_MANUFACTURER_CODE Nika
     PLUGIN_CODE NKsy
-    FORMATS VST3 Standalone
+    FORMATS AU VST3 Standalone
     PRODUCT_NAME "NIKA"
 )
 
@@ -49,6 +49,15 @@ target_link_libraries(NIKA PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
+)
+
+target_compile_definitions(NIKA_Standalone PRIVATE
+    JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1
+)
+
+target_sources(NIKA_Standalone PRIVATE
+    Source/Standalone.mm
+    $<$<PLATFORM_ID:Darwin>:Source/StandaloneNative_Mac.mm>
 )
 
 add_custom_command(TARGET NIKA_VST3 POST_BUILD

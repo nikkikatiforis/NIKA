@@ -32,25 +32,25 @@ const NIKAKeyswitchEngine::Patch NIKAKeyswitchEngine::kPatches[] =
         { 1.0f,   0.256f, false, 0.0f },  // spike
         { -0.2f,  0.512f, false, 0.0f },  // drop below neutral
         { 0.0f,   2.048f, false, 0.0f }   // recover to neutral
-    }, 0.0f, false, 0.0f },
+    }, 0.256f, false, 0.0f },
 
     // D#-1 (note 15) — swell: filter opens (1 s) then closes back (1 s)
     { 1.0f, 2, {
         { 1.0f, 1.024f, false, 0.0f },
         { 0.0f, 2.048f, false, 0.0f }
-    }, 0.0f, false, 0.0f },
+    }, 0.512f, false, 0.0f },
 
     // E-1 (note 16) — sfz: instant spike, slow decay back to neutral
     { 1.0f, 2, {
         { 1.0f, 0.002f, false, 0.0f },
         { 0.0f, 0.512f, false, 0.0f }
-    }, 0.0f, false, 0.0f },
+    }, 0.128f, false, 0.0f },
 
     // F-1 (note 17) — pizz: fast spike (8 ms), fast decay (64 ms)
     { 1.0f, 2, {
         { 1.0f, 0.016f, false, 0.0f },
         { 0.0f, 0.128f, false, 0.0f }
-    }, 0.0f, false, 0.0f },
+    }, 0.064f, false, 0.0f },
 
     // F#-1 (note 18) — trem: LFO oscillation at 6 Hz while held, 50 ms release
     { 1.0f, 1, {

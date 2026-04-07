@@ -13,11 +13,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout NIKAAudioProcessor::createPa
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "squareLevel", "Sqr",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 2.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "pulseLevel", "Pls",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 4.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "pulseWidth", "PW",
@@ -29,43 +29,44 @@ juce::AudioProcessorValueTreeState::ParameterLayout NIKAAudioProcessor::createPa
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "noiseLevel", "Noise",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 2.0f));
 
     // --- VCF ----------------------------------------------------------------
-    // Log-skewed range: skew = 1/e ≈ 0.368; range 16–16384 Hz, default 1 kHz
+    // Log-skewed range: skew = 1/e ≈ 0.368; range 16–16384 Hz
+    // Default = step 16 = 16 * 1024^0.5 = 512 Hz (Preset 01)
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "cutoff", "Cut",
         juce::NormalisableRange<float> (16.0f, 16384.0f, 0.1f,
-                                        1.0f / juce::MathConstants<float>::euler), 1000.0f));
+                                        1.0f / juce::MathConstants<float>::euler), 512.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "resonance", "Res",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 3.0f));
 
     // --- ADSR ---------------------------------------------------------------
     // Steps 0-32; processor converts to seconds using exp curve.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "attack", "Atk",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 2.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 7.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "decay", "Dec",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 12.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 26.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "sustain", "Sus",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 32.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 10.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "release", "Rel",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 16.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 24.0f));
 
     // How far the envelope opens the filter above the base cutoff.
     // Modulation is logarithmic: at full depth, env sweeps up to 5 octaves.
     // Env target is hardcoded at 2 (Both) — no UI parameter.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "filterEnvAmt", "FAMT",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        "filterEnvAmt", "FAmt",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 19.0f));
 
     // --- Output stage -------------------------------------------------------
     // Saturator
@@ -78,17 +79,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout NIKAAudioProcessor::createPa
     // Velocity further scales within this ceiling.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "ksDepth", "Depth",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 32.0f));
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 20.0f));
 
     // --- Effects ------------------------------------------------------------
     // 7 patch slots.
     layout.add (std::make_unique<juce::AudioParameterInt> (
-        "fxPatch", "PATCH", 1, 7, 1));
+        "fxPatch", "Patch", 1, 7, 1));
 
     // 0 = dry only, 32 = fully wet.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "fxMix", "MIX",
-        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 0.0f));
+        "fxMix", "Mix",
+        juce::NormalisableRange<float> (0.0f, 32.0f, 1.0f), 8.0f));
 
     // --- Mono mode ----------------------------------------------------------
     layout.add (std::make_unique<juce::AudioParameterBool> (
@@ -571,7 +572,7 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (envTarget == 0 || envTarget == 2)
                     sample *= envValue;
 
-                const float voiceOut = sample * v.velocity * gain * 0.3f * v.fadeGain;
+                const float voiceOut = sample * v.velocity * gain * 0.36788f * v.fadeGain;  // 1/e
 
                 lSamp += voiceOut;
                 rSamp += voiceOut;
@@ -621,47 +622,18 @@ void NIKAAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    xml->setAttribute ("currentPresetIndex", currentPresetIndex);
     copyXmlToBinary (*xml, destData);
 }
 
 void NIKAAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
-    if (xml && xml->hasTagName (apvts.state.getType()))
-        apvts.replaceState (juce::ValueTree::fromXml (*xml));
-
-    // Always restore to preset 01 on load, ignoring whatever Ableton saved.
-    // Uses the same denormalised values as the editor's pushParam().
-    auto setP = [this] (const juce::String& id, float denorm)
+    if (xml != nullptr && xml->hasTagName (apvts.state.getType()))
     {
-        if (auto* p = dynamic_cast<juce::RangedAudioParameter*> (apvts.getParameter (id)))
-            p->setValueNotifyingHost (p->convertTo0to1 (denorm));
-    };
-
-    // All step params now store [0,32] directly; cutoff stores Hz.
-    const auto cut = [] (int s) { return 16.0f * std::pow (1024.0f, s / 32.0f); };
-
-    // Preset 01 (Oklou): SAW:0 SQR:0 PLS:24 PW:26 SUB:0 NSE:2
-    //                    CUTOFF:16 RESO:3 ATK:7 DEC:18 SUS:16 REL:24 FAMT:28
-    //                    PATCH:1 MIX:8 DEPTH:20  drive:false  mono:false
-    setP ("sawLevel",     0.0f);
-    setP ("squareLevel",  0.0f);
-    setP ("pulseLevel",   24.0f);
-    setP ("pulseWidth",   26.0f);
-    setP ("subLevel",     0.0f);
-    setP ("noiseLevel",   2.0f);
-    setP ("cutoff",       cut (16));
-    setP ("resonance",    3.0f);
-    setP ("attack",       7.0f);
-    setP ("decay",        18.0f);
-    setP ("sustain",      16.0f);
-    setP ("release",      24.0f);
-    setP ("filterEnvAmt", 28.0f);
-    setP ("fxPatch",      1.0f);
-    setP ("fxMix",        8.0f);
-    setP ("ksDepth",      20.0f);
-    setP ("satDrive",     0.0f);
-    setP ("mono",         0.0f);
+        currentPresetIndex = xml->getIntAttribute ("currentPresetIndex", 0);
+        apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    }
 }
 
 juce::AudioProcessorEditor* NIKAAudioProcessor::createEditor()
