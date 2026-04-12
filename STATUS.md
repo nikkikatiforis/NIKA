@@ -1,7 +1,7 @@
 # NIKA — Status
 
 ## Last updated
-2026-03-16
+2026-04-07
 
 ## Build status
 BUILT — VST3 + Standalone compiling clean, installed and working in Ableton.
@@ -75,11 +75,31 @@ Install cmd:
 | `Source/Standalone.mm` | Custom app entry point, NIKATitleBarLAF, NIKAStandaloneWindow, NIKAApplication |
 | `Source/StandaloneNative_Mac.mm` | macOS-only: `nikaForceOpaqueWindow()` — sets NSWindow opaque, kills compositor gradient |
 
+## Session 2026-04-07
+- [x] **Param name consistency fix** — FAMT→FAmt, MIX→Mix, PATCH→Patch (Ableton automation display names)
+- [x] **CMake cache wiped and reconfigured** — old path `/claude-projects/` was stale, fresh configure from `/claude/NIKA/`
+- [x] **Full rebuild** — VST3 + Standalone + AU, all clean
+- [x] **Repacked dist/NIKA-1.0.pkg** — fresh installer with updated build
+- [x] **Standalone installed** to `/Applications/NIKA.app`
+- [x] **dist/ cleaned** — removed unnamed stale .pkg (22 Mar artifact) and pkgroot staging folder
+- [x] **Git committed and pushed** — all previously uncommitted files included (Standalone.mm, StandaloneNative_Mac.mm, CLAUDE.md, STATUS.md, dist/, CMakeLists.txt, PluginEditor, PluginProcessor, KeyswitchEngine). GitHub is now current.
+
+## Session 2026-04-12 — Brief + visual assets
+- [x] **Section 4 NIKA rewritten** — SOMA Laboratory style, confirmed by user. Technical sections factual; romance sparse (one precise line per section). Two additions over original: RE-201 "deviation was the point" line, SVEMA hard stop before "these were not considered features."
+- [x] **СКАЗКУ copy updated** — factual mechanics listed: compressor threshold shift, SVEMA saturation/wow/flutter, shimmer reverb. "Phantom circuit" kept as stylistic choice. "Blooms" fixed to intransitive ("a parallel shimmer engine blooms").
+- [x] **Limiter added to output chain copy** — Weiss 102-inspired brickwall, 0 dBFS ceiling. Was missing (three stages listed, only two named).
+- [x] **Classical Articulations entry extended** — ~1.5× original length, technical register, confirmed by user.
+- [x] **Subtitle iterated** — "EVA SOURCE CODE" replaced. Landed on "EVA DECODE" (user confirmed in PDF). EVA PLAINTEXT/CLEARTEXT also strong candidates explored.
+- [x] **Visual assets sourced** — `seeds/NIKA [EVA]/` created with 13 images + PLACEMENT.md:
+  - `hero/` — NIKA plugin UI (from nikkivst/public/nika-v2.png)
+  - `references/` — ISKRA terminal, 1937 Soviet heroes postcard, Bach manuscript, Roland SH-101, golden ratio spiral SVG, SVEMA tape box
+  - `lore/` — SOMA LYRA-8, Sleepnet vinyl, Gosha AW16 lookbook, Metro Exodus cover
+  - `market/` — Serum UI screenshot
+  - `PLACEMENT.md` — per-image placement instructions for Google Docs insertion
+
 ## What's next
-- [ ] **Laptop keyboard → MIDI** in standalone (KeyListener mapping A=C, W=C#, etc.)
-- [ ] **Distribution build — Mac + Windows**
-  - Mac: proper code signing (Apple Developer cert, notarisation) or ad-hoc for personal use
-  - Windows: CMake toolchain for MSVC or MinGW, VST3 output, installer (NSIS/Inno Setup?)
-  - Consider: universal binary (arm64 + x86_64) on Mac
-  - Consider: what installer/packaging format (drag-to-folder vs. pkg vs. zip)
-  - Consider: whether to ship Standalone as well as VST3 on both platforms
+- [ ] **Windows build** — deferred until after Mac launch (estimated >1 week out)
+  - CMake toolchain for MSVC or MinGW, VST3 output, installer (NSIS/Inno Setup?)
+  - Consider: whether to ship Standalone on Windows too
+- [ ] **Laptop keyboard → MIDI** in standalone — deferred indefinitely (low priority)
+  - KeyListener mapping A=C, W=C#, S=D, E=D#, D=E, F=F, T=F#, G=G, Y=G#, H=A, U=A#, J=B
