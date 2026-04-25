@@ -60,7 +60,23 @@ target_sources(NIKA_Standalone PRIVATE
     $<$<PLATFORM_ID:Darwin>:Source/StandaloneNative_Mac.mm>
 )
 
+set(SIGNING_IDENTITY "Developer ID Application: Nikki Katiforis (C4P6NUHW64)")
+set(ENTITLEMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Source/NIKA.entitlements")
+
 add_custom_command(TARGET NIKA_VST3 POST_BUILD
-    COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:NIKA_VST3>"
-    COMMENT "Ad-hoc signing NIKA.vst3"
+    COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
+            --options runtime
+            --entitlements ${ENTITLEMENTS_FILE}
+            $<TARGET_BUNDLE_DIR:NIKA_VST3>
+    VERBATIM
+    COMMENT "Signing NIKA.vst3 with Developer ID"
+)
+
+add_custom_command(TARGET NIKA_Standalone POST_BUILD
+    COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
+            --options runtime
+            --entitlements ${ENTITLEMENTS_FILE}
+            $<TARGET_BUNDLE_DIR:NIKA_Standalone>
+    VERBATIM
+    COMMENT "Signing NIKA.app with Developer ID"
 )

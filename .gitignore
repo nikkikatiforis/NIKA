@@ -3,4 +3,5 @@ build/
 *.o
 *.a
 *.d
-.claude/settings.local.json
+.claude/
+dist/pkgroot/
