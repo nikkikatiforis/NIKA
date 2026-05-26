@@ -1,4 +1,4 @@
-NIKA 1.0
+NIKA V.01 WIN
 
 1. Unzip
 2. Drag NIKA.vst3 to C:\Program Files\Common Files\VST3\
