@@ -1,10 +1,9 @@
-NIKA / Windows install
+NIKA 1.0
 
-1. Unzip the archive.
-2. Drag NIKA.vst3 into C:\Program Files\Common Files\VST3\
+1. Unzip
+2. Drag NIKA.vst3 to C:\Program Files\Common Files\VST3\
+3. Bypass warnings — "More info" → "Run anyway"
 
-—
+МЫ РОЖДЕНЫ, ЧТОБ СКАЗКУ СДЕЛАТЬ БЫЛЬЮ
 
-If Windows throws a warning, hit More info → Run anyway.
-
-Need help? contact@nikkivst.com
+contact@nikkivst.com
