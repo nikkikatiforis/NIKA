@@ -4,6 +4,12 @@ project(NIKA VERSION 1.0.0)
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../vendor/JUCE")
 add_subdirectory(${JUCE_PATH} JUCE)
 
+if(APPLE)
+    set(NIKA_FORMATS AU VST3 Standalone)
+else()
+    set(NIKA_FORMATS VST3)
+endif()
+
 juce_add_plugin(NIKA
     COMPANY_NAME "NIKA"
     IS_SYNTH TRUE
@@ -14,7 +20,7 @@ juce_add_plugin(NIKA
     COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_MANUFACTURER_CODE Nika
     PLUGIN_CODE NKsy
-    FORMATS AU VST3 Standalone
+    FORMATS ${NIKA_FORMATS}
     PRODUCT_NAME "NIKA"
 )
 
@@ -51,32 +57,34 @@ target_link_libraries(NIKA PRIVATE
     juce::juce_recommended_warning_flags
 )
 
-target_compile_definitions(NIKA_Standalone PRIVATE
-    JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1
-)
+if(APPLE)
+    target_compile_definitions(NIKA_Standalone PRIVATE
+        JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1
+    )
 
-target_sources(NIKA_Standalone PRIVATE
-    Source/Standalone.mm
-    $<$<PLATFORM_ID:Darwin>:Source/StandaloneNative_Mac.mm>
-)
+    target_sources(NIKA_Standalone PRIVATE
+        Source/Standalone.mm
+        Source/StandaloneNative_Mac.mm
+    )
 
-set(SIGNING_IDENTITY "Developer ID Application: Nikki Katiforis (C4P6NUHW64)")
-set(ENTITLEMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Source/NIKA.entitlements")
+    set(SIGNING_IDENTITY "Developer ID Application: Nikki Katiforis (C4P6NUHW64)")
+    set(ENTITLEMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Source/NIKA.entitlements")
 
-add_custom_command(TARGET NIKA_VST3 POST_BUILD
-    COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
-            --options runtime
-            --entitlements ${ENTITLEMENTS_FILE}
-            $<TARGET_BUNDLE_DIR:NIKA_VST3>
-    VERBATIM
-    COMMENT "Signing NIKA.vst3 with Developer ID"
-)
+    add_custom_command(TARGET NIKA_VST3 POST_BUILD
+        COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
+                --options runtime
+                --entitlements ${ENTITLEMENTS_FILE}
+                $<TARGET_BUNDLE_DIR:NIKA_VST3>
+        VERBATIM
+        COMMENT "Signing NIKA.vst3 with Developer ID"
+    )
 
-add_custom_command(TARGET NIKA_Standalone POST_BUILD
-    COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
-            --options runtime
-            --entitlements ${ENTITLEMENTS_FILE}
-            $<TARGET_BUNDLE_DIR:NIKA_Standalone>
-    VERBATIM
-    COMMENT "Signing NIKA.app with Developer ID"
-)
+    add_custom_command(TARGET NIKA_Standalone POST_BUILD
+        COMMAND codesign --force --deep --sign ${SIGNING_IDENTITY}
+                --options runtime
+                --entitlements ${ENTITLEMENTS_FILE}
+                $<TARGET_BUNDLE_DIR:NIKA_Standalone>
+        VERBATIM
+        COMMENT "Signing NIKA.app with Developer ID"
+    )
+endif()
