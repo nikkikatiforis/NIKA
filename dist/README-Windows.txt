@@ -7,4 +7,4 @@ NIKA / Windows install
 
 If Windows throws a warning, hit More info → Run anyway.
 
-Need help? hello@nikkivst.com
+Need help? contact@nikkivst.com
