@@ -257,6 +257,32 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (note >= 19 && note <= 23 && (msg.isNoteOn() || msg.isNoteOff()))
                 continue;
 
+            // ---- All notes off (CC123) / all sound off (CC120) ------------
+            // Host panic / transport-stop safety net.  All sound off kills
+            // voices instantly; all notes off releases them naturally.
+            if (msg.isAllNotesOff() || msg.isAllSoundOff())
+            {
+                const bool hardKill = msg.isAllSoundOff();
+                for (auto& v : voices)
+                {
+                    v.note       = -1;
+                    v.stealing   = false;
+                    v.stealNote_ = -1;
+                    v.fadeInc    = 0.0f;
+                    if (hardKill) v.adsr.reset();
+                    else          v.adsr.noteOff();
+                }
+                noteStackTop_ = 0;
+                for (int k = 0; k < 7; ++k)
+                    if (ksHeldFlags[k].load())
+                    {
+                        ksEngine.noteOff (NIKAKeyswitchEngine::kLowNote + k);
+                        ksReleaseTimesMs[k].store (juce::Time::getMillisecondCounterHiRes());
+                        ksHeldFlags[k].store (false);
+                    }
+                continue;   // consumed — never reaches the voice allocator
+            }
+
             // ---- Pitch bend ±2 semitones -----------------------------------
             if (msg.isPitchWheel())
             {
@@ -391,8 +417,12 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 }
                 else
                 {
-                    bool handled = false;
-                    for (int vi = 0; vi < kNumVoices && !handled; ++vi)
+                    // Release EVERY voice associated with this note — no early
+                    // exit.  A double note-on (key chatter, overlapping clips,
+                    // host double-fire) can land the same note on two voices;
+                    // stopping at the first match leaves the second sustaining
+                    // forever.
+                    for (int vi = 0; vi < kNumVoices; ++vi)
                     {
                         Voice& v = voices[vi];
 
@@ -402,7 +432,16 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                         {
                             v.stealing   = false;
                             v.stealNote_ = -1;
-                            handled = true;
+                            // Retrigger-steal: the voice already sounds this
+                            // very note.  Cancelling alone would eat the
+                            // note-off and leave the ADSR gated on — release
+                            // the voice too.
+                            if (v.note == note && v.adsr.isActive())
+                            {
+                                v.note    = -1;
+                                v.adsr.noteOff();
+                                v.fadeInc = 0.0f;
+                            }
                         }
                         else if (v.note == note && v.adsr.isActive())
                         {
@@ -416,7 +455,6 @@ void NIKAAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                 v.stealNote_ = -1;
                                 v.fadeInc    = 0.0f;
                             }
-                            handled = true;
                         }
                     }
                 }

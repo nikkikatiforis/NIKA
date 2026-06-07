@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NIKA VERSION 1.0.0)
+project(NIKA VERSION 1.0.1)
 
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../vendor/JUCE")
 add_subdirectory(${JUCE_PATH} JUCE)
