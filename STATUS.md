@@ -1,7 +1,7 @@
 # NIKA — Status
 
 ## Last updated
-2026-04-07
+2026-06-07
 
 ## Build status
 BUILT — VST3 + Standalone compiling clean, installed and working in Ableton.
@@ -97,9 +97,27 @@ Install cmd:
   - `market/` — Serum UI screenshot
   - `PLACEMENT.md` — per-image placement instructions for Google Docs insertion
 
+## Session 2026-04-25 — Mac 1.0 release
+- [x] **dist/NIKA-1.0.pkg** — Developer ID signed, notarized, stapled, Gatekeeper accepted
+- [x] **VST3-only delivery** — Standalone decommissioned from pkg
+
+## Session 2026-05-26 — Windows port + release
+- [x] **Windows VST3 build** — same codebase, `if(APPLE)` gating in CMakeLists; built on Windows PC (VS 2022, MSVC v143)
+- [x] **dist/NIKA-1.0.zip** — unsigned (indie standard), scene-style README, verified in Ableton Live 12 / Win10
+- [x] **Storefront delivery live** — Paddle checkout + Vercel Blob + Resend, dual-platform
+
+## Session 2026-06-07 — 1.0.1 stuck-note fix
+- [x] **Stuck-note bug diagnosed** — friend's Windows roadtest; steal-cancel branch ate the note-off when a retrigger-steal targeted the note the voice already sounded (ADSR left gated on, unrecoverable); `handled` early-exit could also leave a duplicate voice unreleased
+- [x] **Fix (commit 6ee1ceb)** — note-off releases ALL matching voices; steal-cancel gates ADSR when v.note == note; CC120/123 all-sound-off/all-notes-off panic handling (voices + mono stack + held keyswitches)
+- [x] **Verified** — Mac (Ableton stress test) + second Windows machine, same day
+- [x] **Versioning** — internal 1.0.1 (support fingerprint), public face stays 1.0 (filenames, V.01 label) — silent revision
+- [x] **Mac repacked + re-notarized** (submission 5390a7a7, accepted, stapled); broken May zip replaced by fixed build under same NIKA-1.0.zip name (commit 12132fe)
+- [x] **Mac machine cleaned** — stale /Library VST3 (Apr) + /Library AU (Mar) removed; single user-folder install remains
+- [x] **notarytool credentials re-stored** — old app-specific password died (401)
+
 ## What's next
-- [ ] **Windows build** — deferred until after Mac launch (estimated >1 week out)
-  - CMake toolchain for MSVC or MinGW, VST3 output, installer (NSIS/Inno Setup?)
-  - Consider: whether to ship Standalone on Windows too
+- [ ] **Storefront blob swap** — replace NIKA-1.0.pkg + NIKA-1.0.zip in Vercel Blob with fixed builds; verify URLs/env vars; byte-check downloads (fixed: pkg 1,490,826 / zip 2,340,868)
+- [ ] **Friend re-test** — original reporter's machine; github.com/nikkikatiforis/NIKA/raw/main/dist/NIKA-1.0.zip now serves the fixed build
+- [ ] **GitHub Actions CI** — cross-platform builds, would eliminate manual Windows rebuild laps (deferred)
 - [ ] **Laptop keyboard → MIDI** in standalone — deferred indefinitely (low priority)
   - KeyListener mapping A=C, W=C#, S=D, E=D#, D=E, F=F, T=F#, G=G, Y=G#, H=A, U=A#, J=B
