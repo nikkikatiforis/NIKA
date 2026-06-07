@@ -118,6 +118,6 @@ Install cmd:
 ## What's next
 - [ ] **Storefront blob swap** — replace NIKA-1.0.pkg + NIKA-1.0.zip in Vercel Blob with fixed builds; verify URLs/env vars; byte-check downloads (fixed: pkg 1,490,826 / zip 2,340,868)
 - [ ] **Friend re-test** — original reporter's machine; github.com/nikkikatiforis/NIKA/raw/main/dist/NIKA-1.0.zip now serves the fixed build
-- [ ] **GitHub Actions CI** — cross-platform builds, would eliminate manual Windows rebuild laps (deferred)
+- [x] **GitHub Actions CI — LIVE** (2026-06-08) — `.github/workflows/windows-build.yml`, windows-2022 runner, JUCE 8.0.12 pinned, zip artifact per push; first run green in 4m18s. Liftable: copy file, edit PLUGIN_NAME + JUCE_VERSION
 - [ ] **Laptop keyboard → MIDI** in standalone — deferred indefinitely (low priority)
   - KeyListener mapping A=C, W=C#, S=D, E=D#, D=E, F=F, T=F#, G=G, Y=G#, H=A, U=A#, J=B
