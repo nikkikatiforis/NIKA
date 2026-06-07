@@ -26,7 +26,10 @@ env:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    # Pinned to the image carrying VS 2022 / MSVC v143 — matches the local
+    # Windows toolchain the shipping builds came from. windows-latest has moved
+    # to a newer Visual Studio that the "Visual Studio 17 2022" generator can't find.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout
