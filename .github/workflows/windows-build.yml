@@ -1,0 +1,55 @@
+# Windows VST3 build — runs on GitHub's servers, no local Windows machine needed.
+#
+# Triggers: any push to main touching source/build files, or the manual
+# "Run workflow" button (Actions tab → Windows build → Run workflow).
+#
+# Output: NIKA-win artifact on the run page (Actions → latest run → Artifacts).
+# Note: GitHub wraps artifacts in an outer zip on download — unzip once to get
+# the distributable NIKA-win.zip.
+#
+# To lift into a new plugin repo: copy this file, edit the two env values below.
+
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Source/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/windows-build.yml'
+  workflow_dispatch:
+
+env:
+  PLUGIN_NAME: NIKA
+  JUCE_VERSION: 8.0.12
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # CMakeLists expects JUCE at ../vendor/JUCE relative to the repo root
+      - name: Clone JUCE
+        shell: pwsh
+        run: git clone --depth 1 --branch ${{ env.JUCE_VERSION }} https://github.com/juce-framework/JUCE.git "${{ github.workspace }}/../vendor/JUCE"
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path "build\${{ env.PLUGIN_NAME }}_artefacts\Release\VST3\${{ env.PLUGIN_NAME }}.vst3","dist\README.txt" -DestinationPath "${{ env.PLUGIN_NAME }}-win.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PLUGIN_NAME }}-win
+          path: ${{ env.PLUGIN_NAME }}-win.zip
+          retention-days: 90
